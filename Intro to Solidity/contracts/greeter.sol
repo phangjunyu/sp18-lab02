@@ -1,12 +1,15 @@
-pragma solidity 0.4.19;
+pragma solidity ^0.4.0;
 
+contract Greet {
 
-contract Greeter {
-    string private greeting;
+    string greeting;
 
-    function Greeter(string _greeter) public {
+    function Greet (string _greeting) public {
+        bytes memory a;
+        greeting = _greeting;
     }
 
-    function greet() public view returns (string) {
+    function greeter() public constant returns (string) {
+        return greeting;
     }
 }

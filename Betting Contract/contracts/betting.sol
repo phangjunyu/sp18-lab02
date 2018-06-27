@@ -55,11 +55,11 @@ contract Betting {
     /* Allow anyone to withdraw their winnings safely (if they have enough) */
     function withdraw(uint withdrawAmount) public returns (uint) {
     }
-    
+
     /* Allow anyone to check the outcomes they can bet on */
     function checkOutcomes(uint outcome) public view returns (uint) {
     }
-    
+
     /* Allow anyone to check if they won any bets */
     function checkWinnings() public view returns(uint) {
     }
@@ -68,3 +68,69 @@ contract Betting {
     function contractReset() public ownerOnly() {
     }
 }
+
+
+/* pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.24;
+
+contract SimpleBetting {
+
+    address owner;
+    address oracle;
+    uint highestOutcome;
+    uint chosenOutcome;
+    uint pot;
+
+    struct Gambler {
+        address id;
+        uint amount;
+        uint bet;
+    }
+
+    Gambler gambA = Gambler(0, 0, 0);
+    Gambler gambB = Gambler(0, 0, 0);
+
+    //if number is 5, then possible outcomes are 0, 1, 2, 3, 4.
+    function deployContract(uint numberOfOutcomes){
+        owner = msg.sender;
+        highestOutcome = numberOfOutcomes;
+    }
+
+    function assignOracle(address assign) public {
+        require(oracle != gambA.id || oracle != gambB.id);
+        oracle = assign;
+    }
+
+
+    function addGamblerA(Gambler newGambler) public {
+        require (gambA.id == 0);
+        require (msg.sender != oracle);
+        require (newGambler.bet < highestOutcome);
+        pot += newGambler.amount;
+        gambA = newGambler;
+    }
+
+    function addGamblerB(Gambler newGambler) public {
+        require (gambB.id == 0);
+        require (msg.sender != oracle);
+        require (newGambler.bet < highestOutcome);
+        pot += newGambler.amount;
+        gambB = newGambler;
+    }
+
+    function chooseOutcome() public {
+        require (gambA.id != 0 && gambB.id != 0);
+        chosenOutcome = uint(sha3(block.timestamp))%highestOutcome;
+        if (gambA.bet == gambB.bet){
+            if (gambA.bet == chosenOutcome){
+                owner.transfer(gambA.amount);
+                owner.transfer(gambB.amount);
+            } else {
+                oracle.transfer(pot);
+            }
+        } else {
+
+        }
+    }
+
+} */
