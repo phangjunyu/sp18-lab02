@@ -1,9 +1,13 @@
-pragma solidity 0.4.19;
+pragma solidity ^0.4.24;
 
 
 contract Betting {
     /* Constructor function, where owner and outcomes are set */
-    function Betting(uint[] _outcomes) public {
+    constructor(uint[] _outcomes) public {
+        for (uint i = 0; i < _outcomes.length; i++){
+            outcomes[i] = _outcomes[i];
+        }
+        owner = msg.sender;
     }
 
     /* Fallback function */
@@ -36,101 +40,102 @@ contract Betting {
     event BetClosed();
 
     /* Uh Oh, what are these? */
-    modifier ownerOnly() {_;}
-    modifier oracleOnly() {_;}
-    modifier outcomeExists(uint outcome) {_;}
+    modifier ownerOnly() {
+        // assert(msg.sender == owner);
+        if (msg.sender == owner)
+        _;
+    }
+    modifier oracleOnly() {
+        if (msg.sender == oracle)
+        _;
+    }
+    modifier outcomeExists(uint outcome) {
+        if (outcomes[outcome] != 0)
+        _;
+    }
 
     /* Owner chooses their trusted Oracle */
     function chooseOracle(address _oracle) public ownerOnly() returns (address) {
+        oracle = _oracle;
+        return oracle;
     }
 
     /* Gamblers place their bets, preferably after calling checkOutcomes */
     function makeBet(uint _outcome) public payable returns (bool) {
+        address gambler = msg.sender;
+
+        //condition
+        require(gambler != oracle && gambler != owner);
+        require(!bets[gambler].initialized);
+
+        //effect
+        bets[gambler].outcome = _outcome;
+        bets[gambler].amount = msg.value;
+        bets[gambler].initialized = true;
+        emit BetMade(gambler);
+
+        if (!bets[gamblerA].initialized)
+            gamblerA = gambler;
+        else{
+            gamblerB = gambler;
+            emit BetClosed();
+        }
+
+
+        return bets[gambler].initialized;
     }
 
     /* The oracle chooses which outcome wins */
     function makeDecision(uint _outcome) public oracleOnly() outcomeExists(_outcome) {
+        require(bets[gamblerA].initialized && bets[gamblerB].initialized);
+        bets[oracle].outcome = _outcome;
+        uint amtA = bets[gamblerA].amount;
+        uint amtB = bets[gamblerB].amount;
+
+        if (bets[gamblerA].outcome == bets[gamblerB].outcome){
+            gamblerA.transfer(amtA);
+            gamblerB.transfer(amtB);
+        } else {
+            if (bets[gamblerA].outcome == outcomes[_outcome]){
+                if (bets[gamblerB].outcome == outcomes[_outcome]){
+                    winnings[gamblerA] = amtA;
+                    winnings[gamblerB] = amtB;
+                } else {
+                    winnings[gamblerA] = amtA + amtB;
+                }
+            } else {
+                if (bets[gamblerB].outcome == outcomes[_outcome]){
+                    winnings[gamblerB] = amtA + amtB;
+                } else {
+                    winnings[oracle] = amtA + amtB;
+                }
+            }
+        }
     }
 
     /* Allow anyone to withdraw their winnings safely (if they have enough) */
     function withdraw(uint withdrawAmount) public returns (uint) {
+        require(winnings[msg.sender] > withdrawAmount);
+        msg.sender.transfer(withdrawAmount);
+        winnings[msg.sender] =- withdrawAmount;
+        return winnings[msg.sender];
     }
 
     /* Allow anyone to check the outcomes they can bet on */
     function checkOutcomes(uint outcome) public view returns (uint) {
+        return outcomes[outcome];
     }
 
     /* Allow anyone to check if they won any bets */
     function checkWinnings() public view returns(uint) {
+        return winnings[msg.sender];
     }
 
     /* Call delete() to reset certain state variables. Which ones? That's upto you to decide */
     function contractReset() public ownerOnly() {
+
+        delete bets[oracle];
+        delete bets[gamblerA];
+        delete bets[gamblerB];
     }
 }
-
-
-/* pragma experimental ABIEncoderV2;
-pragma solidity ^0.4.24;
-
-contract SimpleBetting {
-
-    address owner;
-    address oracle;
-    uint highestOutcome;
-    uint chosenOutcome;
-    uint pot;
-
-    struct Gambler {
-        address id;
-        uint amount;
-        uint bet;
-    }
-
-    Gambler gambA = Gambler(0, 0, 0);
-    Gambler gambB = Gambler(0, 0, 0);
-
-    //if number is 5, then possible outcomes are 0, 1, 2, 3, 4.
-    function deployContract(uint numberOfOutcomes){
-        owner = msg.sender;
-        highestOutcome = numberOfOutcomes;
-    }
-
-    function assignOracle(address assign) public {
-        require(oracle != gambA.id || oracle != gambB.id);
-        oracle = assign;
-    }
-
-
-    function addGamblerA(Gambler newGambler) public {
-        require (gambA.id == 0);
-        require (msg.sender != oracle);
-        require (newGambler.bet < highestOutcome);
-        pot += newGambler.amount;
-        gambA = newGambler;
-    }
-
-    function addGamblerB(Gambler newGambler) public {
-        require (gambB.id == 0);
-        require (msg.sender != oracle);
-        require (newGambler.bet < highestOutcome);
-        pot += newGambler.amount;
-        gambB = newGambler;
-    }
-
-    function chooseOutcome() public {
-        require (gambA.id != 0 && gambB.id != 0);
-        chosenOutcome = uint(sha3(block.timestamp))%highestOutcome;
-        if (gambA.bet == gambB.bet){
-            if (gambA.bet == chosenOutcome){
-                owner.transfer(gambA.amount);
-                owner.transfer(gambB.amount);
-            } else {
-                oracle.transfer(pot);
-            }
-        } else {
-
-        }
-    }
-
-} */
